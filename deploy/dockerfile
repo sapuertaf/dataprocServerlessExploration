@@ -1,0 +1,63 @@
+#Debian es recomendado
+FROM debian:11-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# (Requerido) Instalar dependencias necesarias por Spark para la ejecucion
+RUN apt update && apt install -y procps tini nano
+
+# Instalacion y configuracion de Miniconda3
+ENV CONDA_HOME=/opt/miniconda3
+ENV PYSPARK_PYTHON=${CONDA_HOME}/bin/python
+ENV PATH=${CONDA_HOME}/bin:${PATH}
+COPY Miniconda3-py39_4.10.3-Linux-x86_64.sh .
+RUN bash Miniconda3-py39_4.10.3-Linux-x86_64.sh -b -p ${CONDA_HOME} \
+  && ${CONDA_HOME}/bin/conda config --system --set always_yes True \
+  && ${CONDA_HOME}/bin/conda config --system --set auto_update_conda False \
+  && ${CONDA_HOME}/bin/conda config --system --prepend channels conda-forge \
+  && ${CONDA_HOME}/bin/conda config --system --set channel_priority strict
+
+#Instalar los siguientes paquetes en la imagen de CONDA, 
+#es muy recomendado instalar cada uno de ellos
+
+RUN ${CONDA_HOME}/bin/conda install mamba -n base -c conda-forge \
+    && ${CONDA_HOME}/bin/mamba install \
+      conda \
+      cython \
+      fastavro \
+      fastparquet \
+      gcsfs \
+      google-cloud-bigquery-storage \
+      google-cloud-bigquery[pandas] \
+      google-cloud-dataproc \
+      koalas \
+      matplotlib \
+      nltk \
+      numba \
+      numpy \
+      openblas \
+      orc \
+      pandas \
+      pyarrow \
+      pysal \
+      pytables \
+      python \
+      regex \
+      requests \
+      rtree \
+      scikit-image \
+      scikit-learn \
+      scipy \
+      seaborn \
+      sqlalchemy \
+      sympy \
+      virtualenv
+
+#(Requerido) Instalar paquete delta-spark con pip
+RUN ${CONDA_HOME}/bin/pip install 'delta-spark'
+
+#(Requerido) Crear grupo/usuario 'spark'
+#Este es usuario es el que usa dataproc para todos los jobs de Spark
+RUN groupadd -g 1099 spark
+RUN useradd -u 1099 -g 1099 -d /home/spark -m spark
+USER spark
